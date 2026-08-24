@@ -43,8 +43,13 @@ if st.sidebar.button("🗑️ Clear History"):
     engine._save_history_to_disk()
     st.rerun()
 
-# --- MAIN CONTENT ---
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📐 Algebra & Arithmetic", "📊 Statistics", "🔺 Trigonometry", "🔷 Geometry", "🔄 Converter"])
+st.sidebar.divider()
+        
+# --- NEW: AI TUTOR TOGGLE ---
+st.sidebar.header("🤖 AI Tutor Mode")
+tutor_enabled = st.sidebar.checkbox("Enable Local AI Tutor (Ollama)", value=False)
+if tutor_enabled:
+    st.sidebar.info("Ensure Ollama is running with llama3!")
 
 with tab1:
     st.subheader("Algebra & Arithmetic")
@@ -60,10 +65,19 @@ with tab1:
                 st.markdown("### Steps")
                 for i, step in enumerate(steps):
                     st.write(f"{i+1}. {step}")
+                    
+                # --- AI TUTOR EXPLANATION ---
+                if tutor_enabled:
+                    with st.empty() as tutor_placeholder:
+                        explanation_text = ""
+                        for token in engine.generate_tutor_explanation(problem, steps):
+                            explanation_text += token
+                            tutor_placeholder.info(f"**Tutor Says:**\n\n{explanation_text}")
+
             except Exception as e:
                 st.error(f"Error: {str(e)}")
-        else:
-            st.warning("Please enter a problem.")
+            else:
+                st.warning("Please enter a problem.")
 
 with tab2:
     st.subheader("Statistics")

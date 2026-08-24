@@ -28,13 +28,14 @@ env/
 ENV/
 
 # Streamlit/OmniMath specific
+.streamlit/
 history.json
 sessions/
 *.log
 
 # OS specific
 .DS_Store
-.DS_Store?
+.DS_mode?
 ._*
 .AppleDouble
 .LSOverride

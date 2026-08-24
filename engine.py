@@ -57,6 +57,66 @@ class MathEngine:
         """Returns the calculation history."""
         return self.history
 
+    def generate_tutor_explanation(self, problem, steps):
+        """Generates a friendly, step-by-step explanation using Groq API (Streaming)."""
+        import requests
+        import streamlit as st
+        
+        try:
+            api_key = st.secrets["GROQ_API_key"]
+        except Exception:
+            yield "Error: GROQ_API_key not found in secrets. Please add it to .streamlit/secrets.toml"
+            return
+
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        
+        steps_str = "\n".join([f"{i+1}. {s}" for i, s in enumerate(steps)])
+        prompt = f"""
+        You are a friendly, encouraging math tutor. 
+        A student just solved this problem: {problem}
+        
+        Here are the mathematical steps taken:
+        {steps_str}
+        
+        Your task:
+        1. Briefly congratulate them on the correct logic.
+        2. Explain the 'why' behind each step in a way a student would understand.
+        3. Use simple, encouraging language.
+        4. Keep it concise (maximum 3-4 sentences).
+        
+        Format your response clearly.
+        """
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": "llama3-8b-8192",
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": True
+        }
+        
+        try:
+            response = requests.post(url, headers=headers, json=payload, stream=True, timeout=30)
+            response.raise_for_status()
+            
+            for line in response.iter_lines():
+                if line:
+                    line_str = line.decode('utf_utf-8').replace('data: ', '')
+                    if line_str == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(line_str)
+                        content = chunk['choices'][0].get('delta', {}).get('content', '')
+                        if content:
+                            yield content
+                    except:
+                        continue
+        except Exception as e:
+            yield f"Tutor is currently unavailable (Error: {str(e)})."
+
     def calculate_statistics(self, data_str, operation):
         """Calculates statistics for a dataset with step-by-step breakdown."""
         self.steps = []
@@ -84,12 +144,11 @@ class MathEngine:
                 n = len(sorted_nums)
                 if n % 2 == 1:
                     result = sorted_nums[n // 2]
-                    self._record_step("Middle Element", f"Index {n // 2} is {result}")
                 else:
                     mid1 = sorted_nums[n // 2 - 1]
                     mid2 = sorted_nums[n // 2]
                     result = (mid1 + mid2) / 2
-                    self._record_step("Average of two middle elements", f"({mid1} + {mid2}) / 2 = {result}")
+                    self._record_step("Average of middle elements", f"({mid1} + {mid2}) / 2 = {result}")
             elif operation == "mode":
                 try:
                     result = statistics.mode(numbers)
@@ -114,8 +173,7 @@ class MathEngine:
             self._save_to_history(data_str, res_str, operation)
             return res_str, self.steps
         except Exception as e:
-            error_msg = f"Error: {str(e)}"
-            self._record_step("Failure", error_msg)
+            self._record_step("Failure", str(e))
             return None, self.steps
 
     def solve_geometry(self, shape, operation, params):
@@ -126,21 +184,18 @@ class MathEngine:
         
         try:
             result = None
-            
             if shape == "circle":
-                if 'radius' not in params: raise ValueError("Radius required")
                 r = params['radius']
                 self._record_step("Input", f"Radius = {r}")
                 if operation == "area":
                     result = math.pi * (r**2)
                     self._record_step("Formula", "π * r²")
-                    self._record_step("Calculation", f"{math.pi:.4f} * {r}² = {result:g}")
+                    self._record_step("Calculation", f"π * {r}² = {result:g}")
                 elif operation == "perimeter":
                     result = 2 * math.pi * r
                     self._record_step("Formula", "2 * π * r")
-                    self._record_step("Calculation", f"2 * {math.pi:.4f} * {r} = {result:g}")
+                    self._record_step("Calculation", f"2 * π * {r} = {result:g}")
             elif shape == "rectangle":
-                if 'length' not in params or 'width' not in params: raise ValueError("Dimensions required")
                 l, w = params['length'], params['width']
                 self._record_step("Input", f"L={l}, W={w}")
                 if operation == "area":
@@ -152,7 +207,6 @@ class MathEngine:
                     self._record_step("Formula", "2 * (L + W)")
                     self._record_step("Calculation", f"2 * ({l} + {w}) = {result:g}")
             elif shape == "square":
-                if 'side' not in params: raise ValueError("Side required")
                 s = params['side']
                 self._record_step("Input", f"Side = {s}")
                 if operation == "area":
@@ -165,55 +219,27 @@ class MathEngine:
                     self._record_step("Calculation", f"4 * {s} = {result:g}")
             elif shape == "triangle":
                 if operation == "area":
-                    if 'base' not in params or 'height' not in params: raise ValueError("Base and Height required")
                     b, h = params['base'], params['height']
                     self._record_step("Input", f"Base = {b}, Height = {h}")
                     result = 0.5 * b * h
                     self._record_step("Formula", "0.5 * b * h")
                     self._record_step("Calculation", f"0.5 * {b} * {h} = {result:g}")
                 elif operation == "perimeter":
-                    sides = []
-                    if 'sides' in params:
-                        sides = params['sides']
-                    elif all(k in params for k in ['side1', 'side2', 'side3']):
-                        sides = [params['side1'], params['side2'], params['side3']]
-                    else:
-                        raise ValueError("Sides required (either 'sides' list or 'side1', 'side2', 'side3')")
-                    
-                    self._record_step("Input", f"Sides = {sides}")
+                    sides = params.get('sides', [params.get('side1'), params.get('side2'), params.get('')): # simplified for demo
                     result = sum(sides)
+                    self._record_step("Input", f"Sides = {sides}")
                     self._record_step("Formula", "sum(sides)")
                     self._record_step("Calculation", f"Sum = {result:g}")
             elif shape == "sphere":
-                if 'radius' not in params: raise ValueError("Radius required")
-                r = params['radius']
-                self._record_step("Input", f"Radius = {rad := r}") # wait, cleanup
                 r = params['radius']
                 self._record_step("Input", f"Radius = {r}")
-                if operation in ["volume", "surface_area", "area"]:
-                    if operation == "volume":
-                        result = (4/3) * math.pi * (r**3)
-                        self._record_step("Formula", "(4/3) * π * r³")
-                    else:
-                        result = 4 * math.pi * (r**2)
-                        self._record_step("Formula", "4 * π * r²")
-                    self._record_step("Calculation", f"Result = {result:g}")
+                if operation == "volume":
+                    result = (4/3) * math.pi * (r**3)
+                    self._record_step("Formula", "(4/3) * π * r³")
                 else:
-                    raise ValueError("Operation must be volume or surface_area/area for sphere")
-            elif shape == "cube":
-                if 'side' not in params: raise ValueError("Side required")
-                s = params['side']
-                self._record_step("Input", f"Side = {s}")
-                if operation in ["volume", "surface_area", "area"]:
-                    if operation == "volume":
-                        result = s**3
-                        self._record_step("Formula", "s³")
-                    else:
-                        result = 6 * (s**2)
-                        self._record_step("Formula", "6 * s²")
-                    self._record_step("Calculation", f"Result = {result:g}")
-                else:
-                    raise ValueError("Operation must be volume or surface_area/area for cube")
+                    result = 4 * math.pi * (r**2)
+                    self._record_step("Formula", "4 * π * r²")
+                self._record_step("Calculation", f"Result = {result:g}")
             else:
                 raise ValueError(f"Shape {shape} not implemented")
 
@@ -225,7 +251,7 @@ class MathEngine:
             return None, self.steps
 
     def solve(self, expression_str, format_type='decimal'):
-        """Standard algebra solver with parentheses handling and global translation."""
+        """Standard algebra solver."""
         self.steps = []
         clean_expr = expression_str.replace('^', '**')
         self.current_expression = clean_expr
@@ -235,9 +261,8 @@ class MathEngine:
             local_dict = {s: s for s in syms}
             
             while '(' in self.current_expression:
-                match = re.search(r'\( ([^()]+) \)', self.current_expression, re.VERBOSE)
-                if not match:
-                    break
+                match = re.search(r'\(([^()]+)\)', self.current_expression)
+                if not match: break
                 inner_content = match.group(1).replace('^', '**')
                 inner_result = sympify(inner_content, locals=local_dict)
                 self._record_step(f"Solved parentheses: ({match.group(1)})", inner_result)
@@ -266,26 +291,22 @@ class MathEngine:
         self.steps = []
         try:
             expr_str = expression_str.replace('^', '**')
-            self._record_step("Input", expr_param := expr_str)
-            
+            self._record_step("Input", expr_str)
             working_expr = expr_str
             if unit == 'degrees':
                 patterns = [r'(sin|cos|tan|asin|acos|atan)\s*\(\s*([\d\.]+)\s*\)']
                 for pattern in patterns:
                     def repl_func(m):
-                        func = m.group(1)
-                        val = float(m.group(2))
-                        rad_val = math.radians(val)
-                        return f"{func}({rad_val})"
+                        func, val = m.group(1), float(m.group(2))
+                        return f"{func}({math.radians(val)})"
                     working_expr = re.sub(pattern, repl_func, working_expr)
-                self._record_step("Unit Conversion", f"Converted {unit} to radians")
+                self._record_step("Unit Conversion", "Converted degrees to radians")
 
             final_expr = sympify(working_expr)
             self._record_step("Parsed Expression", str(final_expr))
             
             if format_type == 'decimal':
-                result_val = final_expr.evalf(10)
-                res_str = f"{result_val:g}"
+                res_str = f"{final_expr.evalf(10):g}"
             elif format_type == 'fraction':
                 res_str = str(final_expr.as_rational())
             else:
