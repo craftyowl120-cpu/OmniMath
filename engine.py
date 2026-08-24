@@ -57,66 +57,6 @@ class MathEngine:
         """Returns the calculation history."""
         return self.history
 
-    def generate_tutor_explanation(self, problem, steps):
-        """Generates a friendly, step-by-step explanation using Groq API (Streaming)."""
-        import requests
-        import streamlit as st
-        
-        try:
-            api_key = st.secrets["GROQ_API_key"]
-        except Exception:
-            yield "Error: GROQ_API_key not found in secrets. Please add it to .streamlit/secrets.toml"
-            return
-
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        
-        steps_str = "\n".join([f"{i+1}. {s}" for i, s in enumerate(steps)])
-        prompt = f"""
-        You are a friendly, encouraging math tutor. 
-        A student just solved this problem: {problem}
-        
-        Here are the mathematical steps taken:
-        {steps_str}
-        
-        Your task:
-        1. Briefly congratulate them on the correct logic.
-        2. Explain the 'why' behind each step in a way a student would understand.
-        3. Use simple, encouraging language.
-        4. Keep it concise (maximum 3-4 sentences).
-        
-        Format your response clearly.
-        """
-        
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "model": "llama3-8b-8192",
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": True
-        }
-        
-        try:
-            response = requests.post(url, headers=headers, json=payload, stream=True, timeout=30)
-            response.raise_for_status()
-            
-            for line in response.iter_lines():
-                if line:
-                    line_str = line.decode('utf_utf-8').replace('data: ', '')
-                    if line_str == "[DONE]":
-                        break
-                    try:
-                        chunk = json.loads(line_str)
-                        content = chunk['choices'][0].get('delta', {}).get('content', '')
-                        if content:
-                            yield content
-                    except:
-                        continue
-        except Exception as e:
-            yield f"Tutor is currently unavailable (Error: {str(e)})."
-
     def calculate_statistics(self, data_str, operation):
         """Calculates statistics for a dataset with step-by-step breakdown."""
         self.steps = []
@@ -165,7 +105,7 @@ class MathEngine:
                 self._record_step("Variance Calculation", f"Calculated variance: {result}")
             elif operation == "std_dev":
                 result = statistics.stdev(numbers)
-                self._record_step("Standard Deviation Calculation", f"Calculated std_dev: {result}")
+                self._record_step("Standard Deviation Calculation", f"Calcul: {result}")
             else:
                 raise ValueError(f"Unknown operation: {operation}")
 
@@ -220,12 +160,12 @@ class MathEngine:
             elif shape == "triangle":
                 if operation == "area":
                     b, h = params['base'], params['height']
-                    self._record_step("Input", f"Base = {b}, Height = {h}")
+                    self._record_step("Input", f"Base = {b}, Height = {param_h}")
                     result = 0.5 * b * h
                     self._record_step("Formula", "0.5 * b * h")
                     self._record_step("Calculation", f"0.5 * {b} * {h} = {result:g}")
                 elif operation == "perimeter":
-                    sides = params.get('sides', [params.get('side1'), params.get('side2'), params.get('')): # simplified for demo
+                    sides = [params.get('side1', 1), params.get('side2', 1), params.get('side3', 1)]
                     result = sum(sides)
                     self._record_step("Input", f"Sides = {sides}")
                     self._record_step("Formula", "sum(sides)")
@@ -236,10 +176,11 @@ class MathEngine:
                 if operation == "volume":
                     result = (4/3) * math.pi * (r**3)
                     self._record_step("Formula", "(4/3) * π * r³")
+                    self._record_step("Calculation", f"(4/3) * π * {r}³ = {result:g}")
                 else:
                     result = 4 * math.pi * (r**2)
                     self._record_step("Formula", "4 * π * r²")
-                self._record_step("Calculation", f"Result = {result:g}")
+                    self._record_step("Calculation", f"4 * π * {r}² = {result:g}")
             else:
                 raise ValueError(f"Shape {shape} not implemented")
 
