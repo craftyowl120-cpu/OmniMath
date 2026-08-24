@@ -52,7 +52,7 @@ tab1, tab2, tab3, tab4, tab5 = tabs
 with tab1:
     st.subheader("Algebra & Arithmetic")
     with st.form("algebra_form"):
-        problem = st.text_input("Enter your problem (e.png, e.g., x + 5 = 10 or 2 * (3 + 4)):")
+        problem = st.text_input("Enter your problem (e.g., x + 5 = 10 or 2 * (3 + 4)):")
         submit_algebra = st.form_submit_button("Solve")
     
     if submit_algebra:
@@ -63,19 +63,10 @@ with tab1:
                 st.markdown("### Steps")
                 for i, step in enumerate(steps):
                     st.write(f"{i+1}. {step}")
-                    
-                # --- AI TUTOR EXPLANATION ---
-                if tutor_enabled:
-                    with st.empty() as tutor_placeholder:
-                        explanation_text = ""
-                        for token in engine.generate_tutor_explanation(problem, steps):
-                            explanation_text += token
-                            tutor_placeholder.info(f"**Tutor Says:**\n\n{explanation_text}")
-
             except Exception as e:
                 st.error(f"Error: {str(e)}")
-            else:
-                st.warning("Please enter a problem.")
+        else:
+            st.warning("Please enter a problem.")
 
 with tab2:
     st.subheader("Statistics")
@@ -129,7 +120,7 @@ with tab3:
     st.markdown("🚀 **Quick Functions**")
     btn_cols = st.columns(5)
     funcs = ["sin(", "cos(", "tan(", "atan(", "asin("]
-    for idx, func in enumerate(funcs):
+    for idx, func in enumerate(temp_funcs := funcs):
         with btn_cols[idx]:
             if st.button(func, key=f"btn_{func}"):
                 st.session_state.trig_expr += func
