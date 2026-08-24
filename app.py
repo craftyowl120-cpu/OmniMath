@@ -47,11 +47,11 @@ st.sidebar.divider()
         
 # --- NEW: AI TUTOR TOGGLE ---
 st.sidebar.header("🤖 AI Tutor Mode")
-tutor_enabled = st.sidebar.checkbox("Enable Local AI Tutor (Ollama)", value=False)
+tutor_enabled = st.sidebar.checkbox("Enable AI Tutor (Groq)", value=False)
 if tutor_enabled:
     st.sidebar.info("Ensure Ollama is running with llama3!")
 
-with tab1:
+# --- MAIN CONTENT AREA ---\ntabs = st.tabs([\"Algebra & Arithmetic\", \"Statistics\", \"Trigonometry\", \"Geometry\", \"Unit Converter\"])\ntab1, tab2, tab3, tab4, tab5 = tabs\n\nwith tab1:
     st.subheader("Algebra & Arithmetic")
     with st.form("algebra_form"):
         problem = st.text_input("Enter your problem (e.png, e.g., x + 5 = 10 or 2 * (3 + 4)):")
