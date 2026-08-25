@@ -10,7 +10,7 @@ engine = st.session_state.engine
 
 st.set_page_config(page_title="OmniMath Assistant", page_icon="📐", layout="wide")
 
-st.title("📐 OmniMath Assistant")
+st.title("📐 OmniMath Assistant 🍎")
 st.markdown("Solve Algebra, Arithmetic, Statistics, Trigonometry, and Geometry with step-by-step breakdowns!")
 
 # --- SIDEBAR ---
@@ -46,7 +46,7 @@ if st.sidebar.button("🗑️ Clear History"):
 st.sidebar.divider()
         
 # --- MAIN CONTENT AREA ---
-tabs = st.tabs(["Algebra & Arithmetic", "Statistics", "Trigonometry", "Geometry", "Unit Converter"])
+tabs = st.tabs(["🔢 Algebra & Arithmetic", "📊 Statistics", "🔺 Trigonometry", "🔹 Geometry", "🔄 Unit Converter"])
 tab1, tab2, tab3, tab4, tab5 = tabs
 
 with tab1:
